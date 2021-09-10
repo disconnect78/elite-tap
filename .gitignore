@@ -1,0 +1,5 @@
+*.bin
+*.tap
+*.tzx
+*.zip
+.DS_Store
