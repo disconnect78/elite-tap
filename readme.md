@@ -18,6 +18,10 @@ This is the emulator we use to load then dump the game data. Note that I've used
 - http://fuse-emulator.sourceforge.net/
 - https://fuse-for-macosx.sourceforge.io/
 
+### UnrealSpeccy
+Alternatively, we can use the emulator UnrealSpecch if we have some way of running Windows software -- either natively or under something like [Parallels](https://www.parallels.com/).
+- http://dlcorp.nedopc.com/viewforum.php?f=8
+
 ### Tomaz Kac's ZXTape utilities
 We use these to convert from tap to TZX and back again. The win32 versions don't compile under macOS but the Amiga versions will, so we use these:
 - http://ftp.fau.de/aminet/misc/emu/tap2tzx-os4.lha
@@ -66,29 +70,47 @@ cp bin2bas /usr/local/bin
 
 ## Dumping the game data
 
-To dump the data we will use Fuse to load the game then save out the required data. Ideally, we would set a debugger breakpoint and dump the data when it triggers; unfortunately this isn't possible in macOS Fuse as the required menu option is greyed out when we've hit the breakpoint. So we have to find another way to do it.
+We will use an emulator to load the game then save out the required data. Note that the game's Softlock protection will only correctly decrypt the game if loaded into a standard 48k Spectrum, so make sure you're emulating one.
 
-Start by opening the debugger and setting a breakpoint at $d05f, which we will reach once the game is loaded and decrypted:
+### Using Fuse
 
-```
-br $d05f
-```
+Ideally, we would set a debugger breakpoint and dump the data when it triggers; unfortunately this isn't possible in macOS Fuse as the required menu option is greyed out when we've hit the breakpoint. So we have to find another way to do it.
 
-Load the game from tape and wait until we hit the breakpoint. Now we need to patch in an infinite loop; when we hit this, we can dump the game data at our leisure:
+Start by opening the debugger and setting a breakpoint at $d079, which we will reach once the game is loaded and decrypted:
 
 ```
-se $d079 $18
-se $d07a $fe
+br $d079
+```
+
+Load the game from tape and wait until we hit the breakpoint. Now we need to patch in an infinite loop so that we can return to the emulator window and dump the game data at our leisure:
+
+```
+se $d07a $18
+se $d07b $fe
 ```
 
 Exit the debugger and almost immediately we should hit the loop. Use the `Export Binary Data` menu option to export the data to a file with the start address `16384` and length `49065`. Copy it into the working directory (ie. this one). We're going to create taps of both the A-side and B-side of the tape, so do this for both versions, exporting files `eilte48_a.bin` and `elite48_b.bin` as appropriate.
 
-Finally, we patch the binary files so that the loop we added is patched back to the original bytes. The original location was `$d079` but we saved memory from start address `16384`, ie. `$4000`. This means we need to subtract `$4000` from `$d079` to give us the actual location to patch in the file, which is `$9079`:
+Finally, we patch the binary files so that the loop we added is patched back to the original bytes. The original location was `$d07a` but we saved memory from start address `16384`, ie. `$4000`. This means we need to subtract `$4000` from `$d07a` to give us the actual location to patch in the file, which is `$907a`:
 
 ```
-echo "9079: 0000" | xxd -r - elite48_a.bin
-echo "9079: 0000" | xxd -r - elite48_b.bin
+echo "907a: 0000" | xxd -r - elite48_a.bin
+echo "907a: 0000" | xxd -r - elite48_b.bin
 ```
+
+### Using UnrealSpeccy
+
+UnrealSpeccy's debugger allows us to set a breakpoint and save out the game data from the debugger without needing to do any additional patchimg.
+
+Before we start, we must make sure we have the correct 48k ROMs loaded, otherwise the game won't decrypt correctly. Hit `Alt+F1` to open the settings window and make sure the `MEMORY` tab is open. Ensure `Custom ROMSET` is set to `ZX-Spectrum 48K` then click `OK`. Then press `Shift+F12` to reset to 48K mode.
+
+Now press `Esc` to open the debugger. Press `Alt+C` to open the breakpoints manager. Under `Execution breakpoints`, type `d079` then press `Enter` to create the breakpoint. Press `Esc` to exit the breakpoints manager, then `Esc` again to return to the emulator.
+
+Press `F3` to select the tape file, then load the game. The tape loading will pause partway through so press `F7` to continue loading, then `F10` to speed the emulator up to max speed.
+
+The debugger will open when we hit the breakpoint. Press `Alt+W` to open the `Save data from memory...` box, then press `Enter` to select `to binary file`. Enter the filename `elite48_a.bin` or `elite48_b.bin` depending on whether we loaded the A-side or B-side version. Press `Enter` then provide the start address `4000`. Press `Enter` again then provide the end address `FFA8`. Press `Enter` to save the file.
+
+Once both `elite48_a.bin` and `elite48_b.bin` have been dumped, move the files to the working directory (ie. this one).
 
 ## Writing a loader
 
