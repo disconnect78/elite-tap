@@ -1,10 +1,10 @@
-# ELITE TAP CONVERTER
+# ELITE 48K TAP CONVERTER
 
 ## Overview
 
-This is a write-up of how I created a tap version of Elite (both the Krait and Adder versions) and steps to reproduce it. I'm running macOS so you may need to adjust some steps to suit if you're not. Even if you are, there may be some things I already had installed that you don't ([Homebrew](https://brew.sh/), Python etc.); if any of the below doesn't work then you'll need to figure this out for yourself I'm afraid!
+This is a write-up of how I created a TAP version of Elite (both the Krait and Adder versions) and steps to reproduce it. I'm running macOS so you may need to adjust some steps to suit if you're not. Even if you are, there may be some things I already had installed that you don't ([Homebrew](https://brew.sh/), Python etc.); if any of the below doesn't work then you'll need to figure this out for yourself I'm afraid!
 
-For this conversion we will allow the game's Softlock protection to load and decrypt the game. We will dump the entire block of game data from `$4000` to `$ffa8`, then write a small machine code loader to headerlessly load it back and patch out the Lenslok protection, along with applying a couple of bug fixes. We will compile the loader, embed it in a short BASIC program, then put together our final tap file.
+For this conversion we will allow the game's Softlock protection to load and decrypt the game. We will dump the entire block of game data from `$4000` to `$ffa8`, then write a small machine code loader to headerlessly load it back and patch out the Lenslok protection, along with applying a couple of bug fixes. We will compile the loader, embed it in a short BASIC program, then put together our final TAP file.
 
 ## Prerequisites
 
@@ -19,30 +19,12 @@ This is the emulator we use to load then dump the game data. Note that I've used
 - https://fuse-for-macosx.sourceforge.io/
 
 ### UnrealSpeccy
-Alternatively, we can use the emulator UnrealSpecch if we have some way of running Windows software -- either natively or under something like [Parallels](https://www.parallels.com/).
+Alternatively, we can use the emulator UnrealSpeccy if we have some way of running Windows software -- either natively or under something like [Parallels](https://www.parallels.com/).
 - http://dlcorp.nedopc.com/viewforum.php?f=8
 
-### Tomaz Kac's ZXTape utilities
-We use these to convert from tap to TZX and back again. The win32 versions don't compile under macOS but the Amiga versions will, so we use these:
-- http://ftp.fau.de/aminet/misc/emu/tap2tzx-os4.lha
-- http://ftp.fau.de/aminet/misc/emu/tzx2tap-os4.lha
-
-```
-gcc tzx2tap -o tzx2tap
-gcc tap2tzx -o tap2tzx
-cp tzx2tap /usr/local/bin
-cp tap2tzx /usr/local/bin
-```
-
 ### TZX Tools
-We use the `tzxmerge` tool to combine interim TZX files into one file, and `tzxcut` to remove the unwanted code header.
+We use the `tzxmerge` tool to combine interim files into one file, and `tzxcut` to remove the unwanted code header. Note that despite the name, these tools work just as well with TAP files as they do with TZXs.
 - https://github.com/shred/tzxtools
-
-I had to install `portaudio` before these would install:
-```
-brew install portaudio
-pip3 install tzxtools
-```
 
 ### Pasmo
 This is the Z80 compiler we use.
@@ -70,7 +52,7 @@ cp bin2bas /usr/local/bin
 
 ## Dumping the game data
 
-We will use an emulator to load the game then save out the required data. Note that the game's Softlock protection will only correctly decrypt the game if loaded into a standard 48k Spectrum, so make sure you're emulating one.
+We will use an emulator to load the game then save out the required data. Note that the game's Softlock protection will only correctly decrypt the game if loaded into a standard 48K Spectrum, so make sure you're emulating one.
 
 ### Using Fuse
 
@@ -89,7 +71,7 @@ se $d07a $18
 se $d07b $fe
 ```
 
-Exit the debugger and almost immediately we should hit the loop. Use the `Export Binary Data` menu option to export the data to a file with the start address `16384` and length `49065`. Copy it into the working directory (ie. this one). We're going to create taps of both the A-side and B-side of the tape, so do this for both versions, exporting files `eilte48_a.bin` and `elite48_b.bin` as appropriate.
+Exit the debugger and almost immediately we should hit the loop. Use the `Export Binary Data` menu option to export the data to a file with the start address `16384` and length `49065`. Copy it into the working directory (ie. this current repo). We're going to create TAPs of both the A-side and B-side of the tape, so do this for both versions, exporting files `elite48_a.bin` and `elite48_b.bin` as appropriate.
 
 Finally, we patch the binary files so that the loop we added is patched back to the original bytes. The original location was `$d07a` but we saved memory from start address `16384`, ie. `$4000`. This means we need to subtract `$4000` from `$d07a` to give us the actual location to patch in the file, which is `$907a`:
 
@@ -100,9 +82,11 @@ echo "907a: 0000" | xxd -r - elite48_b.bin
 
 ### Using UnrealSpeccy
 
-UnrealSpeccy's debugger allows us to set a breakpoint and save out the game data from the debugger without needing to do any additional patchimg.
+UnrealSpeccy's debugger allows us to set a breakpoint and save out the game data from the debugger without needing to do any additional patching.
 
-Before we start, we must make sure we have the correct 48k ROMs loaded, otherwise the game won't decrypt correctly. Hit `Alt+F1` to open the settings window and make sure the `MEMORY` tab is open. Ensure `Custom ROMSET` is set to `ZX-Spectrum 48K` then click `OK`. Then press `Shift+F12` to reset to 48K mode.
+Note that as UnrealSpeccy runs in Windows, I've used the Windows shortcut key `Alt` throughout the below instructions. If running in macOS under Parallels or similar, this would of course be substitued for the Mac equivalent `Option`.
+
+Before we start, we must make sure we have the correct 48K ROMs loaded, otherwise the game won't decrypt correctly. Hit `Alt+F1` to open the settings window and make sure the `MEMORY` tab is open. Ensure `Custom ROMSET` is set to `ZX-Spectrum 48K` then click `OK`. Then press `Shift+F12` to reset to 48K mode.
 
 Now press `Esc` to open the debugger. Press `Alt+C` to open the breakpoints manager. Under `Execution breakpoints`, type `d079` then press `Enter` to create the breakpoint. Press `Esc` to exit the breakpoints manager, then `Esc` again to return to the emulator.
 
@@ -110,11 +94,11 @@ Press `F3` to select the tape file, then load the game. The tape loading will pa
 
 The debugger will open when we hit the breakpoint. Press `Alt+W` to open the `Save data from memory...` box, then press `Enter` to select `to binary file`. Enter the filename `elite48_a.bin` or `elite48_b.bin` depending on whether we loaded the A-side or B-side version. Press `Enter` then provide the start address `4000`. Press `Enter` again then provide the end address `FFA8`. Press `Enter` to save the file.
 
-Once both `elite48_a.bin` and `elite48_b.bin` have been dumped, move the files to the working directory (ie. this one).
+Once both `elite48_a.bin` and `elite48_b.bin` have been dumped, move the files to the working directory (ie. this current repo).
 
 ## Writing a loader
 
-[`loader.asm`](loader.asm) is a simple loader which will headerlessly load the block of code we just dumped. After loading, it will apply some patches.
+[`loader.asm`](loader.asm) is a simple loader which will headerlessly load the block of code we just dumped. After loading, it will apply some patches then wait for the user to press a key.
 
 ## Patching the game
 
@@ -126,20 +110,22 @@ We apply 3 patches, as defined in [`patches.asm`](patches.asm):
 
 It's become something of a meme that Lenslok was a bad attempt at protection because of the various usability issues, but it turns out that it wasn't even implemented effectively here! At the very least, they could have made the check routine essential to running the game. For example, [Driller](https://spectrumcomputing.co.uk/entry/1521/ZX-Spectrum/Driller) does this by having two bytes in the game corrupted, and the "enter a word from the manual" routine patches them back to what they should have been (it patches one byte when you enter the routine, and the other when you exit it). These bytes are essential to the game and it will crash immediately without them. A sneakier method of protection is in [ATF](https://spectrumcomputing.co.uk/entry/305/ZX-Spectrum/ATF), where the corrupted byte isn't needed until you reach the second level. So if you patch out the "enter the code" check, you might think you've cracked the protection if you just give it a quick test, but play it for any length of time and you'll realise you haven't!
 
+One way of getting around this kind of thing would be to patch the protection routine (so that it accepts any input, for example) as unless the programmer has been especially sneaky (adding in a checksum routine or whatever) this would allow the protection routine to proceed as normally, patching out any hidden checks, etc.
+
+In the case of Elite's Lenslok, we know for sure that there are no such hidden checks. We can therefore patch out the routine completely with confidence.
+
 ## Relocating the loader.
 
-Just for shits and/or giggles, we're going to embed our loader in a small BASIC program, rather than having it saved in a separate file preceded by a BASIC program that loads then runs it. In order to do this, we need to write a short routine to relocate the loader to where it needs to be. This is done in [`relocate.asm`](relocate.asm).
+Just for shits and/or giggles, we're going to embed our loader in a small BASIC program, rather than having it saved in a separate file preceded by a BASIC program that loads then runs it. In order to do this, we need to write a short routine to relocate the loader to where it needs to be before we run it. This is done in [`relocate.asm`](relocate.asm).
 
 ## Putting it all together
 
-`make both` will do everything needed to assemble the tap files:
-- Compile the loader
+`make both` will do everything needed to assemble the TAP files:
+- Compile the loader;
 - Compile the relocator, which also imports the loader;
 - Embed this loader and relocation bundle in a BASIC program;
-- Convert the dumped binary data to a tap file;
-- Convert the tap to a TZX file (as the TZX tools are more versatile);
-- Glue everything together then remove the unneeded header introduced in the dumped binary data tap;
-- Convert this TZX to our final tap file;
+- Convert the dumped binary data to a TAP file;
+- Glue everything together then remove the unneeded header introduced in the dumped binary data TAP;
 - Delete the interim files.
 
 It will do this for both `elite48_a.bin` and `elite48_b.bin`. If you only want to do one, simply call `make TARGET=file`. For example, if you exported the data to `elite.bin`:
