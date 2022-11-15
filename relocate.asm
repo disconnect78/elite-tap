@@ -1,9 +1,11 @@
-reloc_location equ $6000                     ; any old start
+; Relocation stub
+; 
+; This is intended to be embedded in a small BASIC program. It includes our machine code loader and relocates it to the
+; desired location.
+
 reloc_destination equ $ffa9                  ; where we relocate to
 reloc_length equ reloc_end - reloc_start     ; length of relocation stub
 loader_length equ loader_end - loader_start  ; length of loader
-
-          org  reloc_location
 
 reloc_start
           ; bc = start address of this code when called
@@ -28,5 +30,3 @@ reloc_end
 loader_start
           incbin "loader.bin"
 loader_end
-
-          end  reloc_location
