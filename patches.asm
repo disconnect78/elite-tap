@@ -1,3 +1,7 @@
+; Patches
+;
+; Game patches to be applied
+
           ; Patch out Lenslok
           ; * The previous tap version patched $c22e to $18 which makes it pass the Lenslok check regardless of a right
           ;   or wrong response. This works fine but we're going to patch so it skips Lenslok entirely by ret'ing from

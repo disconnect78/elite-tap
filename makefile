@@ -4,31 +4,23 @@ all:
 	pasmo relocate.asm relocate.bin
 
 	# Embed relocator in REM loader
-	bin2bas -ftzx="E L I T E" relocate.bin loader.tzx
+	bin2bas -ftap="E L I T E" relocate.bin loader.tap
 
 	# Convert dumped binary file to tap
 	bin2tap -o $(TARGET)_bin.tap $(TARGET).bin
 
-	# Convert taps to tzx for easier handling
-	tap2tzx $(TARGET)_bin.tap
-
-	# Merge everything into one tzx
-	tzxmerge -o $(TARGET)_combined.tzx loader.tzx $(TARGET)_bin.tzx
+	# Merge everything into one tap
+	tzxmerge -o $(TARGET)_combined.tap loader.tap $(TARGET)_bin.tap
 
 	# Remove the superfluous headers
-	tzxcut -i $(TARGET)_combined.tzx -o $(TARGET).tzx --invert 2
-
-	# Convert that tzx to a tap
-	tzx2tap $(TARGET).tzx
+	tzxcut -i $(TARGET)_combined.tap -o $(TARGET).tap --invert 2
 
 	# Clean up interim files
 	rm relocate.bin
 	rm loader.bin
-	rm loader.tzx
+	rm loader.tap
 	rm $(TARGET)_bin.tap
-	rm $(TARGET)_bin.tzx
-	rm $(TARGET)_combined.tzx
-	rm $(TARGET).tzx
+	rm $(TARGET)_combined.tap
 
 both:
 	make TARGET=elite48_a
